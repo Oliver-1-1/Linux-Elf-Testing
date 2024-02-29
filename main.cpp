@@ -143,7 +143,7 @@ int main()
     for(auto p : programs){
 
         for(auto s : sections){
-            if(IsAdressInSection(s.addr, p.addr - p.size, p.size)){
+            if(IsAdressInSection(s.addr, p.addr, p.size)){
                 std::cout << "Section Name: " << s.name << " Section addr: " << (uint64_t*)s.addr  << "  Size: " << (uint64_t*)s.size << std::endl; 
             }
         }    
