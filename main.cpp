@@ -1,8 +1,10 @@
 #include <iostream>
 #include <elf.h>
 #include <vector>
+#include <unistd.h>
 
 #define PAGE_SIZE 0x1000
+#define PATCH_SIZE 8
 
 typedef struct
 {
@@ -40,7 +42,6 @@ uint64_t GetAddressOfElf(uint64_t page_below)
         uint32_t *magic = (uint32_t *)page_below;
         if (*magic == 0x464c457f) // Check first bytes to know its the elf header.
         {
-            std::cout << "Found Elf at address > " << std::hex << page_below << std::dec << std::endl;
             return page_below;
         }
         page_below -= PAGE_SIZE;
@@ -93,11 +94,50 @@ std::vector<uint8_t> DumpFileSection(uint64_t file_buffer, uint64_t offset, uint
     return bytes;
 }
 
+void printModifiedBytes(uint8_t *runtime, uint8_t *file, uint64_t size)
+{
+    uint64_t i = 0;
+    while (i < size)
+    {
+        if (runtime[i] == file[i])
+        {
+            i++;
+        }
+        else
+        {
+            unsigned long long count = 0;
+            while ((i + count) < size && runtime[i + count] != file[i + count])
+            {
+                count++;
+            }
+
+            if (count >= PATCH_SIZE)
+            {
+                std::cout << count << " Bytes is modified: ";
+                for (uint64_t j = 0; j < count; j++)
+                {
+                    printf("%02X ", file[i + j]);
+                }
+                printf(" | ");
+                for (uint64_t j = 0; j < count; j++)
+                {
+                    printf("%02X ", runtime[i + j]);
+                }
+                printf("\n");
+            }
+
+            i += count;
+        }
+    }
+}
+
 int main()
 {
+    std::cout << getpid() << std::endl;
     std::cout << "Entry!" << std::endl;
     std::cout << "Main page > " << std::hex << AlignPage((uint64_t)&main) << std::endl;
-
+    int temp = 0;
+    std::cin >> temp;
     uint64_t program_elf = (uint64_t)DumpFile("Program");
     uint64_t memory_elf = GetAddressOfElf(AlignPage((uint64_t)&main));
 
@@ -139,14 +179,15 @@ int main()
         program = (Elf64_Phdr *)((uint64_t)program + elf_header->e_phentsize);
     }
 
-    std::cout << "Real Address: " << (uint64_t)&main << std::endl;
-    for(auto p : programs){
+    for (auto v : sections)
+    {
+        if (!v.name.compare(".text"))
+        { // Just for test
+            auto runtime = DumpRuntimeSection(v.addr, v.size);
+            auto file = DumpRuntimeSection(program_elf + v.offset, v.size);
 
-        for(auto s : sections){
-            if(IsAdressInSection(s.addr, p.addr, p.size)){
-                std::cout << "Section Name: " << s.name << " Section addr: " << (uint64_t*)s.addr  << "  Size: " << (uint64_t*)s.size << std::endl; 
-            }
-        }    
+            printModifiedBytes(runtime.data(), file.data(), v.size);
+        }
     }
 
     while (1)
