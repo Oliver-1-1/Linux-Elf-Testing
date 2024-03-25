@@ -94,7 +94,7 @@ std::vector<uint8_t> DumpFileSection(uint64_t file_buffer, uint64_t offset, uint
     return bytes;
 }
 
-void printModifiedBytes(uint8_t *runtime, uint8_t *file, uint64_t size)
+void PrintModifiedBytes(uint8_t *runtime, uint8_t *file, uint64_t size)
 {
     uint64_t i = 0;
     while (i < size)
@@ -186,7 +186,7 @@ int main()
             auto runtime = DumpRuntimeSection(v.addr, v.size);
             auto file = DumpRuntimeSection(program_elf + v.offset, v.size);
 
-            printModifiedBytes(runtime.data(), file.data(), v.size);
+            PrintModifiedBytes(runtime.data(), file.data(), v.size);
         }
     }
 
